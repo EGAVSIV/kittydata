@@ -82,33 +82,67 @@ def check_pwd(p):
     return hashlib.sha256(p.encode()).hexdigest() == EDIT_PASSWORD_HASH
 
 # ================= UI =================
-st.markdown("## 🏦 **समिति मासिक किट्टी योगदान प्रणाली**")
+st.markdown("### 📊 **मासिक कुल संग्रह (Auto Calculated)**")
 
-if "edit_mode" not in st.session_state:
-    st.session_state.edit_mode = False
+# ---- Prepare base table ----
+summary_rows = []
 
-main_df = load_main()
+for m in MONTHS:
+    summary_rows.append({
+        "Name": "None",
+        "Month": m,
+        "Total Collection": 0
+    })
 
-# -------- MAIN TABLE (VIEW) --------
-st.markdown("### 📋 **मुख्य योगदान तालिका (केवल देखने हेतु)**")
-st.dataframe(main_df, use_container_width=True)
+summary_df = pd.DataFrame(summary_rows)
 
-pwd = st.text_input("🔐 संपादन पासवर्ड", type="password")
+# ---- Editable table with row-wise dropdown ----
+edited_summary = st.data_editor(
+    summary_df,
+    column_config={
+        "Name": st.column_config.SelectboxColumn(
+            "Name",
+            options=["None"] + list(main_df["Name"].unique()),
+            required=True
+        ),
+        "Month": st.column_config.TextColumn(
+            "Month",
+            disabled=True
+        ),
+        "Total Collection": st.column_config.NumberColumn(
+            "Total Collection",
+            disabled=True
+        )
+    },
+    hide_index=True,
+    use_container_width=True
+)
 
-if pwd and check_pwd(pwd) and not st.session_state.edit_mode:
-    if st.button("✏️ Edit Main Table"):
-        st.session_state.edit_mode = True
-        st.rerun()
+# ---- Auto calculation per row ----
+for i, r in edited_summary.iterrows():
+    name = r["Name"]
+    month = r["Month"]
 
-# -------- EDIT MODE --------
-if st.session_state.edit_mode:
-    st.markdown("### ✏️ **मासिक एंट्री (Editable Mode)**")
+    if name == "None":
+        total = (
+            pd.to_numeric(main_df[month], errors="coerce")
+            .fillna(0)
+            .sum()
+        )
+    else:
+        total = (
+            pd.to_numeric(
+                main_df.loc[main_df["Name"] == name, month],
+                errors="coerce"
+            )
+            .fillna(0)
+            .sum()
+        )
 
-    edited = st.data_editor(
-        main_df,
-        disabled=["SR","Flat No","Name","Kitti Amount"],
-        use_container_width=True
-    )
+    edited_summary.loc[i, "Total Collection"] = total
+
+st.dataframe(edited_summary, use_container_width=True)
+
 
     col1, col2 = st.columns(2)
     with col1:
