@@ -153,15 +153,18 @@ summary_edit = st.data_editor(
     use_container_width=True
 )
 
-# Auto-calc based on month selection
 for i, r in summary_edit.iterrows():
-    if r["Month"]:
-        summary_edit.loc[i,"Amount"] = (
-            pd.to_numeric(main_df[r["Month"]], errors="coerce")
-            .fillna(0).sum()
+    month = r["Month"]
+
+    if month in MONTHS:
+        summary_edit.loc[i, "Amount"] = (
+            pd.to_numeric(main_df[month], errors="coerce")
+            .fillna(0)
+            .sum()
         )
     else:
-        summary_edit.loc[i,"Amount"] = 0
+        summary_edit.loc[i, "Amount"] = 0
+
 
 if st.session_state.edit_mode and st.button("💾 Save Summary"):
     save_summary(summary_edit)
