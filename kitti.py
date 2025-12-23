@@ -3,22 +3,31 @@ import pandas as pd
 import os
 import hashlib
 
-# ================= CONFIG =================
+# ================= PAGE CONFIG =================
 st.set_page_config(
-    page_title="समिति किट्टी सिस्टम",
+    page_title="Manglam Anchal Kitti – Sundarkand",
     page_icon="💰",
     layout="wide"
 )
 
+# ================= HEADER =================
 st.markdown(
     """
-    <div style="text-align:center; font-size:28px; font-weight:700; margin-bottom:10px;">
+    <div style="text-align:center; font-size:30px; font-weight:700;">
         🙏 श्री हनुमते नमः 🙏
     </div>
+    <div style="text-align:center; font-size:20px; margin-top:5px;">
+        Manglam Anchal Kitti <b>"Sundarkand"</b>
+    </div>
+    <div style="text-align:center; color:gray; margin-top:5px;">
+        View only — Enter password to edit
+    </div>
+    <hr>
     """,
     unsafe_allow_html=True
 )
 
+# ================= CONSTANTS =================
 EDIT_PASSWORD_HASH = hashlib.sha256("kitti123".encode()).hexdigest()
 MAIN_FILE = "kitti_main.csv"
 
@@ -45,7 +54,7 @@ MASTER = [
     (10,"B-403","श्रीमती किरण"),
 ]
 
-# ================= DATA =================
+# ================= DATA FUNCTIONS =================
 def create_main():
     rows = []
     for sr, flat, name in MASTER:
@@ -77,107 +86,88 @@ def save_main(df):
 def check_pwd(p):
     return hashlib.sha256(p.encode()).hexdigest() == EDIT_PASSWORD_HASH
 
-# ================= SESSION =================
-if "edit_mode" not in st.session_state:
-    st.session_state.edit_mode = False
-
 # ================= LOAD DATA =================
 main_df = load_main()
 
-# ================= SUMMARY TABLE =================
-st.markdown("### 📊 **मासिक कुल संग्रह (Auto Calculated)**")
+# ================= FORM =================
+with st.form("kitti_edit_form"):
 
-summary_rows = []
-for m in MONTHS:
-    summary_rows.append({
-        "Name": "None",
-        "Month": m,
-        "Total Collection": 0
-    })
+    # ---------- PASSWORD ----------
+    pwd = st.text_input("🔐 Edit Password", type="password")
+    can_edit = pwd and check_pwd(pwd)
 
-summary_df = pd.DataFrame(summary_rows)
+    # ---------- MAIN TABLE ----------
+    st.markdown("### 📋 मुख्य योगदान तालिका")
 
-edited_summary = st.data_editor(
-    summary_df,
-    column_config={
-        "Name": st.column_config.SelectboxColumn(
-            "Name",
-            options=["None"] + list(main_df["Name"].unique()),
-            required=True
+    edited_main = st.data_editor(
+        main_df,
+        disabled=(
+            ["SR","Flat No","Name","Kitti Amount"]
+            if can_edit
+            else list(main_df.columns)
         ),
-        "Month": st.column_config.TextColumn(
-            "Month",
-            disabled=True
-        ),
-        "Total Collection": st.column_config.NumberColumn(
-            "Total Collection",
-            disabled=True
-        )
-    },
-    hide_index=True,
-    use_container_width=True
-)
+        use_container_width=True,
+        key="main_table"
+    )
 
-for i, r in edited_summary.iterrows():
-    month = r["Month"]
-    name = r["Name"]
+    # ---------- SUMMARY TABLE ----------
+    st.markdown("### 📊 मासिक कुल संग्रह (Auto Calculated)")
 
-    if name == "None":
-        total = pd.to_numeric(main_df[month], errors="coerce").fillna(0).sum()
-    else:
-        total = pd.to_numeric(
-            main_df.loc[main_df["Name"] == name, month],
-            errors="coerce"
-        ).fillna(0).sum()
+    summary_rows = []
+    for m in MONTHS:
+        summary_rows.append({
+            "Name": "None",
+            "Month": m,
+            "Total Collection": 0
+        })
 
-    edited_summary.loc[i, "Total Collection"] = total
+    summary_df = pd.DataFrame(summary_rows)
 
-st.dataframe(edited_summary, use_container_width=True)
+    edited_summary = st.data_editor(
+        summary_df,
+        column_config={
+            "Name": st.column_config.SelectboxColumn(
+                "Name",
+                options=["None"] + list(main_df["Name"].unique())
+            ),
+            "Month": st.column_config.TextColumn(
+                "Month",
+                disabled=True
+            ),
+            "Total Collection": st.column_config.NumberColumn(
+                "Total Collection",
+                disabled=True
+            )
+        },
+        hide_index=True,
+        use_container_width=True,
+        key="summary_table"
+    )
 
-# ================= EDIT MODE =================
-# ================= मासिक एंट्री =================
-st.divider()
-st.markdown("### ✏️ **मासिक एंट्री (Editable Mode)**")
+    # ---------- AUTO CALC ----------
+    for i, r in edited_summary.iterrows():
+        month = r["Month"]
+        name = r["Name"]
 
-pwd = st.text_input("🔐 संपादन पासवर्ड", type="password")
+        if name == "None":
+            total = pd.to_numeric(main_df[month], errors="coerce").fillna(0).sum()
+        else:
+            total = pd.to_numeric(
+                main_df.loc[main_df["Name"] == name, month],
+                errors="coerce"
+            ).fillna(0).sum()
 
-can_edit = pwd and check_pwd(pwd)
+        edited_summary.loc[i, "Total Collection"] = total
 
-edited = st.data_editor(
-    main_df,
-    disabled=(
-        ["SR","Flat No","Name","Kitti Amount"]
-        if can_edit
-        else list(main_df.columns)  # 🔒 fully locked without password
-    ),
-    use_container_width=True
-)
+    # ---------- SAVE ----------
+    submitted = st.form_submit_button("💾 Save Changes")
 
-if can_edit:
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("💾 Save"):
-            save_main(edited)
-            st.success("डेटा सेव हो गया")
-            st.rerun()
-
-    with col2:
-        if st.button("✅ OK (Exit Edit Mode)"):
-            st.success("View mode activated")
-            st.rerun()
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 Save"):
-            save_main(edited)
-            st.success("डेटा सेव हो गया")
-            st.rerun()
-
-    with col2:
-        if st.button("✅ OK (Exit Edit Mode)"):
-            st.session_state.edit_mode = False
-            st.rerun()
+    if submitted:
+        if not can_edit:
+            st.error("Incorrect password — cannot save")
+        else:
+            save_main(edited_main)
+            st.success("डेटा सफलतापूर्वक सेव हो गया")
 
 # ================= FOOTER =================
 st.markdown("""
