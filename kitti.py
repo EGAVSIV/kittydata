@@ -27,13 +27,13 @@ def initial_main_data():
     return pd.DataFrame([
         ["A-412", "Smt Rajesh Yadav", 2000] + [""]*12,
         ["A-509", "Smt Manju", 2000] + [""]*12,
-        ["A-101", "Smt Anju", ""] + [""]*12,
-        ["A-202", "Smt Raju", ""] + [""]*12,
-        ["A-810", "Smt Sarita", ""] + [""]*12,
+        ["A-101", "Smt Anju", 2000] + [""]*12,
+        ["A-202", "Smt Raju", 2000] + [""]*12,
+        ["A-810", "Smt Sarita", 2000] + [""]*12,
         ["B-407", "Smt Pragya", 2000] + [""]*12,
         ["B-203", "Smt Minakshi", 2000] + [""]*12,
         ["B-201", "Smt Santosh", 2000] + [""]*12,
-        ["A-307", "Smt Rajbala", ""] + [""]*12,
+        ["A-307", "Smt Rajbala", 4000] + [""]*12,
         ["B-403", "Smt Kiran", 4000] + [""]*12,
     ], columns=["Flat No", "Name", "Kitti Amount"] + MONTHS)
 
