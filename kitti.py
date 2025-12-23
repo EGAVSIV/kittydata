@@ -20,7 +20,6 @@ st.markdown(
 )
 
 EDIT_PASSWORD_HASH = hashlib.sha256("kitti123".encode()).hexdigest()
-
 MAIN_FILE = "kitti_main.csv"
 
 MONTHS = [
@@ -66,11 +65,8 @@ def load_main():
         create_main().to_csv(MAIN_FILE, index=False)
 
     df = pd.read_csv(MAIN_FILE)
-
-    # Force fixed amount
     for i, r in df.iterrows():
         df.loc[i, "Kitti Amount"] = FIXED_KITTI_BY_SR[int(r["SR"])]
-
     return df
 
 def save_main(df):
@@ -81,12 +77,17 @@ def save_main(df):
 def check_pwd(p):
     return hashlib.sha256(p.encode()).hexdigest() == EDIT_PASSWORD_HASH
 
-# ================= UI =================
+# ================= SESSION =================
+if "edit_mode" not in st.session_state:
+    st.session_state.edit_mode = False
+
+# ================= LOAD DATA =================
+main_df = load_main()
+
+# ================= SUMMARY TABLE =================
 st.markdown("### 📊 **मासिक कुल संग्रह (Auto Calculated)**")
 
-# ---- Prepare base table ----
 summary_rows = []
-
 for m in MONTHS:
     summary_rows.append({
         "Name": "None",
@@ -96,7 +97,6 @@ for m in MONTHS:
 
 summary_df = pd.DataFrame(summary_rows)
 
-# ---- Editable table with row-wise dropdown ----
 edited_summary = st.data_editor(
     summary_df,
     column_config={
@@ -118,47 +118,32 @@ edited_summary = st.data_editor(
     use_container_width=True
 )
 
-# ---- Auto calculation per row ----
 for i, r in edited_summary.iterrows():
-    name = r["Name"]
     month = r["Month"]
+    name = r["Name"]
 
     if name == "None":
-        total = (
-            pd.to_numeric(main_df[month], errors="coerce")
-            .fillna(0)
-            .sum()
-        )
+        total = pd.to_numeric(main_df[month], errors="coerce").fillna(0).sum()
     else:
-        total = (
-            pd.to_numeric(
-                main_df.loc[main_df["Name"] == name, month],
-                errors="coerce"
-            )
-            .fillna(0)
-            .sum()
-        )
+        total = pd.to_numeric(
+            main_df.loc[main_df["Name"] == name, month],
+            errors="coerce"
+        ).fillna(0).sum()
 
     edited_summary.loc[i, "Total Collection"] = total
 
 st.dataframe(edited_summary, use_container_width=True)
 
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 Save"):
-            save_main(edited)
-            st.success("डेटा सेव हो गया")
-            st.rerun()
-
-    with col2:
-        if st.button("✅ OK (Exit Edit Mode)"):
-            st.session_state.edit_mode = False
-            st.rerun()
-
-# -------- MONTH TOTALS --------
+# ================= EDIT MODE =================
 st.divider()
-# -------- EDIT MODE --------
+pwd = st.text_input("🔐 संपादन पासवर्ड", type="password")
+
+if pwd and check_pwd(pwd):
+    if not st.session_state.edit_mode:
+        if st.button("✏️ Edit Main Table"):
+            st.session_state.edit_mode = True
+            st.rerun()
+
 if st.session_state.edit_mode:
     st.markdown("### ✏️ **मासिक एंट्री (Editable Mode)**")
 
@@ -169,7 +154,6 @@ if st.session_state.edit_mode:
     )
 
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("💾 Save"):
             save_main(edited)
@@ -181,10 +165,9 @@ if st.session_state.edit_mode:
             st.session_state.edit_mode = False
             st.rerun()
 
-
 # ================= FOOTER =================
 st.markdown("""
 ---
 **Designed & Maintained by**  
-**Gaurav Singh Yadav**  
+**Gaurav Singh Yadav**
 """)
