@@ -54,7 +54,7 @@ MASTER = [
     (10,"B-403","श्रीमती किरण"),
 ]
 
-# ================= DATA FUNCTIONS =================
+# ================= DATA =================
 def create_main():
     rows = []
     for sr, flat, name in MASTER:
@@ -90,7 +90,7 @@ def check_pwd(p):
 main_df = load_main()
 
 # ================= FORM =================
-with st.form("kitti_edit_form"):
+with st.form("kitti_form"):
 
     pwd = st.text_input("🔐 Edit Password", type="password")
     can_edit = pwd and check_pwd(pwd)
@@ -101,66 +101,42 @@ with st.form("kitti_edit_form"):
     edited_main = st.data_editor(
         main_df,
         disabled=(["SR","Flat No","Name","Kitti Amount"] if can_edit else list(main_df.columns)),
-        use_container_width=True,
-        key="main_table"
+        use_container_width=True
     )
 
-    # ---------- SUMMARY TABLE ----------
-    st.markdown("### 📊 मासिक कुल संग्रह (Auto Calculated)")
+    # ---------- MONTH-WISE COLUMN TOTALS ----------
+    st.markdown("### 📌 माह-वार कुल (Main Table Totals)")
 
-    summary_rows = []
+    month_total_row = {
+        "Month": MONTHS,
+        "Total Collection": [
+            pd.to_numeric(edited_main[m], errors="coerce").fillna(0).sum()
+            for m in MONTHS
+        ]
+    }
 
-    for m in MONTHS:
-        # Normal row
-        summary_rows.append({
-            "Name": "None",
-            "Month": m,
-            "Total Collection": 0
-        })
+    month_totals_df = pd.DataFrame(month_total_row)
+    st.dataframe(month_totals_df, use_container_width=True)
 
-        # TOTAL row
-        summary_rows.append({
-            "Name": "TOTAL",
-            "Month": m,
-            "Total Collection": 0
-        })
+    # ---------- MONTHLY TOTAL TABLE ----------
+    st.markdown("### 📊 मासिक कुल संग्रह")
 
-    summary_df = pd.DataFrame(summary_rows)
-
-    edited_summary = st.data_editor(
-        summary_df,
-        column_config={
-            "Name": st.column_config.SelectboxColumn(
-                "Name",
-                options=["None"] + list(main_df["Name"].unique()) + ["TOTAL"]
-            ),
-            "Month": st.column_config.TextColumn("Month", disabled=True),
-            "Total Collection": st.column_config.NumberColumn("Total Collection", disabled=True)
-        },
-        hide_index=True,
-        use_container_width=True,
-        key="summary_table"
+    selected_month = st.selectbox(
+        "महीना चुनें",
+        options=MONTHS
     )
 
-    # ---------- AUTO CALC ----------
-    for i, r in edited_summary.iterrows():
-        month = r["Month"]
-        name = r["Name"]
-        source_df = edited_main
+    total_for_month = pd.to_numeric(
+        edited_main[selected_month], errors="coerce"
+    ).fillna(0).sum()
 
-        if name == "TOTAL":
-            total = pd.to_numeric(source_df[month], errors="coerce").fillna(0).sum()
-        elif name == "None":
-            total = pd.to_numeric(source_df[month], errors="coerce").fillna(0).sum()
-        else:
-            total = pd.to_numeric(
-                source_df.loc[source_df["Name"] == name, month],
-                errors="coerce"
-            ).fillna(0).sum()
+    summary_df = pd.DataFrame(
+        [{"Month": selected_month, "Total Collection": total_for_month}]
+    )
 
-        # 🔥 THIS WAS MISSING
-        edited_summary.loc[i, "Total Collection"] = total
+    st.dataframe(summary_df, use_container_width=True)
 
+    # ---------- SAVE ----------
     submitted = st.form_submit_button("💾 Save Changes")
 
     if submitted:
