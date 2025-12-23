@@ -146,6 +146,12 @@ st.divider()
 st.markdown("### 📊 **मासिक संग्रह सारांश (Settlement Sheet)**")
 
 names = list(main_df["Name"])
+
+# Add duplicate entries ONLY for double contributors (SR 9 & 10)
+for sr in [9, 10]:
+    name = main_df.loc[main_df["SR"] == sr, "Name"].values[0]
+    names.append(name)
+
 summary_df = load_summary(names)
 
 summary_edit = st.data_editor(
