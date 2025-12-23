@@ -149,15 +149,24 @@ with st.form("kitti_edit_form"):
         month = r["Month"]
         name = r["Name"]
 
-        if name == "None":
-            total = pd.to_numeric(main_df[month], errors="coerce").fillna(0).sum()
-        else:
-            total = pd.to_numeric(
-                main_df.loc[main_df["Name"] == name, month],
-                errors="coerce"
-            ).fillna(0).sum()
+        source_df = edited_main  # 🔥 IMPORTANT LINE
 
-        edited_summary.loc[i, "Total Collection"] = total
+        if name == "None":
+            total = (
+                pd.to_numeric(source_df[month], errors="coerce")
+                .fillna(0)
+                .sum()
+            )
+        else:
+            total = (
+                pd.to_numeric(
+                    source_df.loc[source_df["Name"] == name, month],
+                    errors="coerce"
+                )
+                .fillna(0)
+                .sum()
+            )
+
 
     # ---------- SAVE ----------
     submitted = st.form_submit_button("💾 Save Changes")
