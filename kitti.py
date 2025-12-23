@@ -176,5 +176,5 @@ st.markdown("""
 ---
 **Designed & Maintained by**  
 **Gaurav Singh Yadav**  
-🩷💛🩵💙🩶💜🤍🤎💖  
+  
 """)
