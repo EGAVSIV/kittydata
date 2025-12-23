@@ -158,44 +158,28 @@ st.dataframe(edited_summary, use_container_width=True)
 
 # -------- MONTH TOTALS --------
 st.divider()
-st.markdown("### 📊 **मासिक कुल संग्रह (Auto Calculated)**")
+# -------- EDIT MODE --------
+if st.session_state.edit_mode:
+    st.markdown("### ✏️ **मासिक एंट्री (Editable Mode)**")
 
-# ---- Name Dropdown ----
-member_names = ["None"] + list(main_df["Name"].unique())
+    edited = st.data_editor(
+        main_df,
+        disabled=["SR","Flat No","Name","Kitti Amount"],
+        use_container_width=True
+    )
 
-selected_name = st.selectbox(
-    "नाम चुनें (Name Select करें)",
-    options=member_names,
-    index=0
-)
+    col1, col2 = st.columns(2)
 
-rows = []
+    with col1:
+        if st.button("💾 Save"):
+            save_main(edited)
+            st.success("डेटा सेव हो गया")
+            st.rerun()
 
-for m in MONTHS:
-    if selected_name == "None":
-        total = (
-            pd.to_numeric(main_df[m], errors="coerce")
-            .fillna(0)
-            .sum()
-        )
-    else:
-        total = (
-            pd.to_numeric(
-                main_df.loc[main_df["Name"] == selected_name, m],
-                errors="coerce"
-            )
-            .fillna(0)
-            .sum()
-        )
-
-    rows.append([selected_name, m, total])
-
-total_df = pd.DataFrame(
-    rows,
-    columns=["Name", "Month", "Total Collection"]
-)
-
-st.dataframe(total_df, use_container_width=True)
+    with col2:
+        if st.button("✅ OK (Exit Edit Mode)"):
+            st.session_state.edit_mode = False
+            st.rerun()
 
 
 # ================= FOOTER =================
