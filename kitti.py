@@ -126,8 +126,8 @@ with st.form("kitti_form"):
         column_config={
             "Name": st.column_config.SelectboxColumn(
                 "Name",
-                options=list(main_df["Name"].unique()),
-                required=True
+                options=["None"] + list(main_df["Name"].unique()),
+                required=False
             ),
             "Month": st.column_config.TextColumn("Month", disabled=True),
             "Amount": st.column_config.NumberColumn("Amount", disabled=True)
