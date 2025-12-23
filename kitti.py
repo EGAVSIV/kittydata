@@ -126,17 +126,43 @@ if st.session_state.edit_mode:
 st.divider()
 st.markdown("### 📊 **मासिक कुल संग्रह (Auto Calculated)**")
 
-month_totals = {
-    m: pd.to_numeric(main_df[m], errors="coerce").fillna(0).sum()
-    for m in MONTHS
-}
+# ---- Name Dropdown ----
+member_names = ["None"] + list(main_df["Name"].unique())
+
+selected_name = st.selectbox(
+    "नाम चुनें (Name Select करें)",
+    options=member_names,
+    index=0
+)
+
+rows = []
+
+for m in MONTHS:
+    if selected_name == "None":
+        total = (
+            pd.to_numeric(main_df[m], errors="coerce")
+            .fillna(0)
+            .sum()
+        )
+    else:
+        total = (
+            pd.to_numeric(
+                main_df.loc[main_df["Name"] == selected_name, m],
+                errors="coerce"
+            )
+            .fillna(0)
+            .sum()
+        )
+
+    rows.append([selected_name, m, total])
 
 total_df = pd.DataFrame(
-    [[m, month_totals[m]] for m in MONTHS],
-    columns=["Month", "Total Collection"]
+    rows,
+    columns=["Name", "Month", "Total Collection"]
 )
 
 st.dataframe(total_df, use_container_width=True)
+
 
 # ================= FOOTER =================
 st.markdown("""
