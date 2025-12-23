@@ -9,6 +9,15 @@ st.set_page_config(
     page_icon="💰",
     layout="wide"
 )
+st.markdown(
+    """
+    <div style="text-align:center; font-size:28px; font-weight:700; margin-bottom:10px;">
+        🙏 श्री हनुमते नमः 🙏
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 EDIT_PASSWORD_HASH = hashlib.sha256("kitti123".encode()).hexdigest()
 
