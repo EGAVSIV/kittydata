@@ -135,23 +135,37 @@ for i, r in edited_summary.iterrows():
 st.dataframe(edited_summary, use_container_width=True)
 
 # ================= EDIT MODE =================
+# ================= मासिक एंट्री =================
 st.divider()
+st.markdown("### ✏️ **मासिक एंट्री (Editable Mode)**")
+
 pwd = st.text_input("🔐 संपादन पासवर्ड", type="password")
 
-if pwd and check_pwd(pwd):
-    if not st.session_state.edit_mode:
-        if st.button("✏️ Edit Main Table"):
-            st.session_state.edit_mode = True
+can_edit = pwd and check_pwd(pwd)
+
+edited = st.data_editor(
+    main_df,
+    disabled=(
+        ["SR","Flat No","Name","Kitti Amount"]
+        if can_edit
+        else list(main_df.columns)  # 🔒 fully locked without password
+    ),
+    use_container_width=True
+)
+
+if can_edit:
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("💾 Save"):
+            save_main(edited)
+            st.success("डेटा सेव हो गया")
             st.rerun()
 
-if st.session_state.edit_mode:
-    st.markdown("### ✏️ **मासिक एंट्री (Editable Mode)**")
-
-    edited = st.data_editor(
-        main_df,
-        disabled=["SR","Flat No","Name","Kitti Amount"],
-        use_container_width=True
-    )
+    with col2:
+        if st.button("✅ OK (Exit Edit Mode)"):
+            st.success("View mode activated")
+            st.rerun()
 
     col1, col2 = st.columns(2)
     with col1:
