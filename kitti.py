@@ -104,37 +104,37 @@ with st.form("kitti_form"):
         use_container_width=True
     )
 
-    # ---------- MONTH-WISE COLUMN TOTALS ----------
-    st.markdown("### 📌 माह-वार कुल (Main Table Totals)")
-
-    month_total_row = {
-        "Month": MONTHS,
-        "Total Collection": [
-            pd.to_numeric(edited_main[m], errors="coerce").fillna(0).sum()
-            for m in MONTHS
-        ]
-    }
-
-    month_totals_df = pd.DataFrame(month_total_row)
-    st.dataframe(month_totals_df, use_container_width=True)
-
     # ---------- MONTHLY TOTAL TABLE ----------
     st.markdown("### 📊 मासिक कुल संग्रह")
 
-    selected_month = st.selectbox(
-        "महीना चुनें",
-        options=MONTHS
+    summary_rows = []
+    for m in MONTHS:
+        total_amount = pd.to_numeric(
+            edited_main[m], errors="coerce"
+        ).fillna(0).sum()
+
+        summary_rows.append({
+            "Name": "",       # to be selected
+            "Month": m,       # fixed
+            "Amount": total_amount
+        })
+
+    summary_df = pd.DataFrame(summary_rows)
+
+    edited_summary = st.data_editor(
+        summary_df,
+        column_config={
+            "Name": st.column_config.SelectboxColumn(
+                "Name",
+                options=list(main_df["Name"].unique()),
+                required=True
+            ),
+            "Month": st.column_config.TextColumn("Month", disabled=True),
+            "Amount": st.column_config.NumberColumn("Amount", disabled=True)
+        },
+        hide_index=True,
+        use_container_width=True
     )
-
-    total_for_month = pd.to_numeric(
-        edited_main[selected_month], errors="coerce"
-    ).fillna(0).sum()
-
-    summary_df = pd.DataFrame(
-        [{"Month": selected_month, "Total Collection": total_for_month}]
-    )
-
-    st.dataframe(summary_df, use_container_width=True)
 
     # ---------- SAVE ----------
     submitted = st.form_submit_button("💾 Save Changes")
