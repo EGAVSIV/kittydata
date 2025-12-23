@@ -30,6 +30,7 @@ st.markdown(
 # ================= CONSTANTS =================
 EDIT_PASSWORD_HASH = hashlib.sha256("kitti123".encode()).hexdigest()
 MAIN_FILE = "kitti_main.csv"
+SUMMARY_FILE = "kitti_monthly_summary.csv"
 
 MONTHS = [
     "Dec-25","Jan-26","Feb-26","Mar-26","Apr-26","May-26",
@@ -54,7 +55,7 @@ MASTER = [
     (10,"B-403","श्रीमती किरण"),
 ]
 
-# ================= DATA =================
+# ================= DATA FUNCTIONS =================
 def create_main():
     rows = []
     for sr, flat, name in MASTER:
@@ -83,11 +84,25 @@ def save_main(df):
         df.loc[i, "Kitti Amount"] = FIXED_KITTI_BY_SR[int(r["SR"])]
     df.to_csv(MAIN_FILE, index=False)
 
+def load_summary():
+    if not os.path.exists(SUMMARY_FILE):
+        df = pd.DataFrame({
+            "Month": MONTHS,
+            "Name": ["None"] * len(MONTHS)
+        })
+        df.to_csv(SUMMARY_FILE, index=False)
+
+    return pd.read_csv(SUMMARY_FILE)
+
+def save_summary(df):
+    df[["Month", "Name"]].to_csv(SUMMARY_FILE, index=False)
+
 def check_pwd(p):
     return hashlib.sha256(p.encode()).hexdigest() == EDIT_PASSWORD_HASH
 
 # ================= LOAD DATA =================
 main_df = load_main()
+summary_saved = load_summary()
 
 # ================= FORM =================
 with st.form("kitti_form"):
@@ -108,14 +123,19 @@ with st.form("kitti_form"):
     st.markdown("### 📊 मासिक कुल संग्रह")
 
     summary_rows = []
+
     for m in MONTHS:
         total_amount = pd.to_numeric(
             edited_main[m], errors="coerce"
         ).fillna(0).sum()
 
+        saved_name = summary_saved.loc[
+            summary_saved["Month"] == m, "Name"
+        ].values[0]
+
         summary_rows.append({
-            "Name": "",       # to be selected
-            "Month": m,       # fixed
+            "Name": saved_name,
+            "Month": m,
             "Amount": total_amount
         })
 
@@ -144,6 +164,7 @@ with st.form("kitti_form"):
             st.error("Incorrect password — cannot save")
         else:
             save_main(edited_main)
+            save_summary(edited_summary)
             st.success("डेटा सफलतापूर्वक सेव हो गया")
 
 # ================= FOOTER =================
