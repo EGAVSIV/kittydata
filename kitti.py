@@ -9,6 +9,7 @@ st.set_page_config(
     page_icon="💰",
     layout="wide"
 )
+
 st.markdown(
     """
     <div style="text-align:center; font-size:28px; font-weight:700; margin-bottom:10px;">
@@ -18,11 +19,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 EDIT_PASSWORD_HASH = hashlib.sha256("kitti123".encode()).hexdigest()
 
 MAIN_FILE = "kitti_main.csv"
-SUMMARY_FILE = "kitti_summary.csv"
 
 MONTHS = [
     "Dec-25","Jan-26","Feb-26","Mar-26","Apr-26","May-26",
@@ -59,7 +58,6 @@ def create_main():
         }
         for m in MONTHS:
             row[m] = ""
-        row["Total"] = 0
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -69,34 +67,16 @@ def load_main():
 
     df = pd.read_csv(MAIN_FILE)
 
-    # Force fixed amount + calculate total
+    # Force fixed amount
     for i, r in df.iterrows():
-        sr = int(r["SR"])
-        df.loc[i,"Kitti Amount"] = FIXED_KITTI_BY_SR[sr]
-        df.loc[i,"Total"] = (
-            pd.to_numeric(r[MONTHS], errors="coerce").fillna(0).sum()
-        )
+        df.loc[i, "Kitti Amount"] = FIXED_KITTI_BY_SR[int(r["SR"])]
+
     return df
 
 def save_main(df):
     for i, r in df.iterrows():
-        sr = int(r["SR"])
-        df.loc[i,"Kitti Amount"] = FIXED_KITTI_BY_SR[sr]
-        df.loc[i,"Total"] = (
-            pd.to_numeric(r[MONTHS], errors="coerce").fillna(0).sum()
-        )
+        df.loc[i, "Kitti Amount"] = FIXED_KITTI_BY_SR[int(r["SR"])]
     df.to_csv(MAIN_FILE, index=False)
-
-def load_summary(names):
-    if not os.path.exists(SUMMARY_FILE):
-        pd.DataFrame(
-            [[n,"",0] for n in names],
-            columns=["Name","Month","Amount"]
-        ).to_csv(SUMMARY_FILE, index=False)
-    return pd.read_csv(SUMMARY_FILE)
-
-def save_summary(df):
-    df.to_csv(SUMMARY_FILE, index=False)
 
 def check_pwd(p):
     return hashlib.sha256(p.encode()).hexdigest() == EDIT_PASSWORD_HASH
@@ -109,7 +89,7 @@ if "edit_mode" not in st.session_state:
 
 main_df = load_main()
 
-# ---------- MAIN TABLE ----------
+# -------- MAIN TABLE (VIEW) --------
 st.markdown("### 📋 **मुख्य योगदान तालिका (केवल देखने हेतु)**")
 st.dataframe(main_df, use_container_width=True)
 
@@ -120,12 +100,13 @@ if pwd and check_pwd(pwd) and not st.session_state.edit_mode:
         st.session_state.edit_mode = True
         st.rerun()
 
+# -------- EDIT MODE --------
 if st.session_state.edit_mode:
     st.markdown("### ✏️ **मासिक एंट्री (Editable Mode)**")
 
     edited = st.data_editor(
         main_df,
-        disabled=["SR","Flat No","Name","Kitti Amount","Total"],
+        disabled=["SR","Flat No","Name","Kitti Amount"],
         use_container_width=True
     )
 
@@ -141,55 +122,25 @@ if st.session_state.edit_mode:
             st.session_state.edit_mode = False
             st.rerun()
 
-# ---------- SUMMARY TABLE ----------
+# -------- MONTH TOTALS --------
 st.divider()
-st.markdown("### 📊 **मासिक संग्रह सारांश (Settlement Sheet)**")
+st.markdown("### 📊 **मासिक कुल संग्रह (Auto Calculated)**")
 
-names = list(main_df["Name"])
+month_totals = {
+    m: pd.to_numeric(main_df[m], errors="coerce").fillna(0).sum()
+    for m in MONTHS
+}
 
-# Add duplicate entries ONLY for double contributors (SR 9 & 10)
-for sr in [9, 10]:
-    name = main_df.loc[main_df["SR"] == sr, "Name"].values[0]
-    names.append(name)
-
-summary_df = load_summary(names)
-
-summary_edit = st.data_editor(
-    summary_df,
-    column_config={
-        "Month": st.column_config.SelectboxColumn(
-            "Month", options=[""] + MONTHS
-        ),
-        "Amount": st.column_config.NumberColumn(
-            "Amount", disabled=True
-        )
-    },
-    disabled=["Name"] if st.session_state.edit_mode else True,
-    use_container_width=True
+total_df = pd.DataFrame(
+    [[m, month_totals[m]] for m in MONTHS],
+    columns=["Month", "Total Collection"]
 )
 
-for i, r in summary_edit.iterrows():
-    month = r["Month"]
-
-    if month in MONTHS:
-        summary_edit.loc[i, "Amount"] = (
-            pd.to_numeric(main_df[month], errors="coerce")
-            .fillna(0)
-            .sum()
-        )
-    else:
-        summary_edit.loc[i, "Amount"] = 0
-
-
-if st.session_state.edit_mode and st.button("💾 Save Summary"):
-    save_summary(summary_edit)
-    st.success("सारांश सेव हो गया")
-    st.rerun()
+st.dataframe(total_df, use_container_width=True)
 
 # ================= FOOTER =================
 st.markdown("""
 ---
 **Designed & Maintained by**  
 **Gaurav Singh Yadav**  
-  
 """)
